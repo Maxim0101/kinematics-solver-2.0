@@ -123,10 +123,14 @@ button[type="submit"]:enabled:active {
   text-align: center;
   vertical-align: middle;
 }
+
 .fraction .top {
   display: block;
 }
+
 .fraction .bottom {
   display: block;
   border-top: 1px solid black;
 }
+
+
