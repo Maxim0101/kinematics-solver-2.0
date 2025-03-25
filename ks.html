@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kinematics Solver</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="ks-logo.png" type="image/png">
+</head>
+<body>
+    <div id="title-box">
+        <h1>Kinematics Solver 2.0</h1> 
+        <p>Solve kinematic problems from physics with a simple calculator!</p>
+    </div>
+
+    <form novalidate>
+        <h2>Input Given Data</h2>
+
+        <label for="vi">Initial Velocity (m/s)</label>
+        <input type="number" id="vi" autocomplete="off">
+        <br><br>
+        
+        <label for="vf">Final Velocity (m/s)</label>
+        <input type="number" id="vf" autocomplete="off">
+        <br><br>
+        
+        <label for="a">Acceleration (m/s<sup>2</sup>)</label>
+        <input type="number" id="a" autocomplete="off">
+        <br><br>
+        
+        <label for="t">Time (s)</label>
+        <input type="number" id="t" autocomplete="off">
+        <br><br>
+        
+        <label for="x">Displacement (m)</label>
+        <input type="number" id="x" autocomplete="off">
+        <br><br>
+        
+        <p id="input-hint">⚠️ Not enough variables. Please make sure to input at least 3 variables.</p>
+        <p id="input-hint-2">⚠️ 5 variables given. Nothing to solve for.</p>
+        <button type="submit">SOLVE</button>
+    </form>
+
+    <div id="results-box">
+        <h2>Results</h2>
+        <p id="nan-warning" style="display: none; color: red; font-size: 14px;">
+            ⚠️ Unable to compute. One of the calculations involves the square root of a negative number.
+        </p>
+        <div class="results-row" id="results-row" style="display: none;">
+            <div class="results-section" id="result-left" style="display: none;">
+                <p id="formula-used-left"></p>
+                <p id="substitution-left"></p>
+                <p id="answer-left"></p>
+            </div>
+            <div class="vertical-divider" id="divider" style="display: none;"></div>
+            <div class="results-section" id="result-right" style="display: none;">
+                <p id="formula-used-right"></p>
+                <p id="substitution-right"></p>
+                <p id="answer-right"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputs = document.querySelectorAll('input[type="number"]');
+        const button = document.querySelector('button');
+        const hint = document.getElementById('input-hint');
+        const hint2 = document.getElementById('input-hint-2');
+
+        const nanWarning = document.getElementById("nan-warning");
+        const resultsRow = document.getElementById("results-row");
+        const left = document.getElementById("result-left");
+        const right = document.getElementById("result-right");
+        const divider = document.getElementById("divider");
+
+        function checkInputs() {
+            let numGiven = 0;
+            for (let i = 0; i < inputs.length; i++) {
+                if (inputs[i].value.trim() !== '') {
+                    numGiven++;
+                }   
+            }
+
+            button.disabled = numGiven < 3 || numGiven === 5;
+            hint.style.display = numGiven < 3 ? 'block' : 'none';
+            hint2.style.display = numGiven === 5 ? 'block' : 'none';
+        }
+
+        function getVal(id) {
+            const val = document.getElementById(id).value;
+            return val.trim() === "" ? null : parseFloat(val);
+        }
+    
+        function formatAnswer(num) {
+            const rounded = parseFloat(num.toFixed(3));
+            return Number.isInteger(rounded) ? rounded.toString() : rounded.toString();
+        }
+
+        function solver(numGiven, x, vi, vf, a, t) {
+            let formula1 = "", sub1 = "", solvingFor1 = "", ans1 = "", unit1 = "";
+            let formula2 = "", sub2 = "", solvingFor2 = "", ans2 = "", unit2 = "";  
+
+            if (numGiven === 4) {
+                if (vf === null) {
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `v<sub>f</sub> = ${vi} + ${a} * ${t}`;
+                    solvingFor1 = "v<sub>f</sub>";
+                    ans1 = vi + a * t;
+                    unit1 = "m/s";
+                } else if (vi === null) {
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `${vf} = v<sub>i</sub> + ${a} * ${t}`; 
+                    solvingFor1 = "v<sub>i</sub>";
+                    ans1 = vf - a * t;
+                    unit1 = "m/s";
+                } else if (a === null) {
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `${vf} = ${vi} + a * ${t}`;
+                    solvingFor1 = "a";
+                    ans1 = (vf - vi) / t;
+                    unit1 = "m/s<sup>2</sup>";
+                } else if (t === null) {
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `${vf} = ${vi} + ${a} * t`;
+                    solvingFor1 = "t";
+                    ans1 = (vf - vi) / a;
+                    unit1 = "s";
+                } else { // x === null
+                    formula1 = "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>";
+                    sub1 = `Δx = ${vi} * ${t} + <sup>1</sup>&frasl;<sub>2</sub> * ${a} * ${t}<sup>2</sup>`;
+                    solvingFor1 = "Δx";
+                    ans1 = vi * t + 1/2 * a * t ** 2;
+                    unit1 = "m";
+                }
+                return {
+                    formula: formula1,
+                    sub: sub1,
+                    solvingFor: solvingFor1,
+                    ans: formatAnswer(ans1),
+                    unit: unit1
+                };
+            } else {
+                if (x === null && vf === null) { 
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `v<sub>f</sub> = ${vi} + ${a} * ${t}`;
+                    solvingFor1 = "v<sub>f</sub>";
+                    ans1 = vi + a * t;
+                    unit1 = "m/s";
+
+                    formula2 = "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>";
+                    sub2 = `Δx = ${vi} * ${t} + <sup>1</sup>&frasl;<sub>2</sub> * ${a} * ${t}<sup>2</sup>`;
+                    solvingFor2 = "Δx";
+                    ans2 = vi * t + 1/2 * a * t**2;
+                    unit2 = "m";
+
+                } else if (x === null && vi === null) {
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `${vf} = v<sub>i</sub> + ${a} * ${t}`;
+                    solvingFor1 = "v<sub>i</sub>";
+                    ans1 = vf - (a * t);
+                    unit1 = "m/s";
+
+                    formula2 = "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>";
+                    sub2 = `Δx = ${formatAnswer(ans1)} * ${t} + <sup>1</sup>&frasl;<sub>2</sub> * ${a} * ${t}<sup>2</sup>`;
+                    solvingFor2 = "Δx";
+                    ans2 = ans1 * t + 1/2 * a * t**2;
+                    unit2 = "m";
+
+                } else if (x === null && a === null) { 
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `${vf} = ${vi} + a * ${t}`;
+                    solvingFor1 = "a";
+                    ans1 = (vf - vi) / t;
+                    unit1 = "m/s<sup>2</sup>";
+
+                    formula2 = "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>";
+                    sub2 = `Δx = ${vi} * ${t} + <sup>1</sup>&frasl;<sub>2</sub> * ${formatAnswer(ans1)} * ${t}<sup>2</sup>`;
+                    solvingFor2 = "Δx";
+                    ans2 = vi * t + 1/2 * ans1 * t**2;
+                    unit2 = "m";
+
+                } else if (x === null && t === null) { 
+                    formula1 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub1 = `${vf} = ${vi} + ${a} * t`;
+                    solvingFor1 = "t";
+                    ans1 = (vf - vi) / a;
+                    unit1 = "s";
+
+                    formula2 = "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>";
+                    sub2 = `Δx = ${vi} * ${formatAnswer(ans1)} + <sup>1</sup>&frasl;<sub>2</sub> * ${a} * ${formatAnswer(ans1)}<sup>2</sup>`;
+                    solvingFor2 = "Δx";
+                    ans2 = vi * ans1 + 1/2 * a * ans1**2;
+                    unit2 = "m";
+
+                } else if (vf === null && vi === null) {
+                    formula1 = "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>";
+                    sub1 = `${x} = v<sub>i</sub> * ${t} + <sup>1</sup>&frasl;<sub>2</sub> * ${a} * ${t}<sup>2</sup>`;
+                    solvingFor1 = "v<sub>i</sub>";
+                    ans1 = (x - 1/2 * a * t**2) / t;
+                    unit1 = "m/s";
+
+                    formula2 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub2 = `v<sub>f</sub> = ${formatAnswer(ans1)} + ${a} * ${t}`;
+                    solvingFor2 = "v<sub>f</sub>";
+                    ans2 = ans1 + a * t;
+                    unit2 = "m/s";
+
+                } else if (vf === null && a === null) {
+                    formula1 = "Δx = <span class='fraction'><span class='top'>v<sub>i</sub> + v<sub>f</sub></span><span class='bottom'>2</span></span> * t";
+                    sub1 = `${x} = <span class="fraction"><span class="top">${vi} + v<sub>f</sub></span><span class="bottom">2</span></span> * ${t}`;
+                    solvingFor1 = "v<sub>f</sub>";
+                    ans1 = (x / t) * 2 - vi;
+                    unit1 = "m/s";
+
+                    formula2 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub2 = `${formatAnswer(ans1)} = ${vi} + a * ${t}`;
+                    solvingFor2 = "a";
+                    ans2 = (ans1 - vi) / t;
+                    unit2 = "m/s<sup>2</sup>";
+
+                } else if (vf === null && t === null) {
+                    formula1 = "v<sub>f</sub><sup>2</sup> = v<sub>i</sub><sup>2</sup> + 2 * a * Δx";
+                    sub1 = `v<sub>f</sub><sup>2</sup> = ${vi}<sup>2</sup> + 2 * ${a} * ${x}`;
+                    solvingFor1 = "v<sub>f</sub>";
+                    ans1 = Math.sqrt(vi**2 + 2 * a * x);
+                    unit1 = "m/s";
+
+                    formula2 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub2 = `${formatAnswer(ans1)} = ${vi} + ${a} * t`;
+                    solvingFor2 = "t";
+                    ans2 = (ans1 - vi) / a;
+                    unit2 = "s";
+
+                } else if (vi === null && a === null) {
+                    formula1 = "Δx = <span class='fraction'><span class='top'>v<sub>i</sub> + v<sub>f</sub></span><span class='bottom'>2</span></span> * t";
+                    sub1 = `${x} = <span class='fraction'><span class='top'>v<sub>i</sub> + ${vf}</span><span class='bottom'>2</span></span> * ${t}`;
+                    solvingFor1 = "v<sub>i</sub>";
+                    ans1 = (x / t) * 2 - vf;
+                    unit1 = "m/s";
+
+                    formula2 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub2 = `${vf} = ${formatAnswer(ans1)} + a * ${t}`;
+                    solvingFor2 = "a";
+                    ans2 = (vf - ans1) / t;
+                    unit2 = "m/s<sup>2</sup>";
+
+                } else if (vi === null && t === null) { 
+                    formula1 = "v<sub>f</sub><sup>2</sup> = v<sub>i</sub><sup>2</sup> + 2 * a * Δx";
+                    sub1 = `${vf}<sup>2</sup> = v<sub>i</sub><sup>2</sup> + 2 * ${a} * ${x}`;
+                    solvingFor1 = "v<sub>i</sub>";
+                    let underRoot = vf**2 - (2 * a * x);
+                        if (underRoot >= 0) {
+                            ans1 = Math.sqrt(underRoot);
+                        } else {
+                            ans1 = NaN;
+                        }
+                    unit1 = "m/s";
+
+                    formula2 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub2 = `${vf} = ${formatAnswer(ans1)} + ${a} * t`;
+                    solvingFor2 = "t";
+                    ans2 = (vf - ans1) / a;
+                    unit2 = "s";
+
+                } else { // a === null && t === null 
+                    formula1 = "v<sub>f</sub><sup>2</sup> = v<sub>i</sub><sup>2</sup> + 2 * a * Δx";
+                    sub1 = `${vf}<sup>2</sup> = ${vi}<sup>2</sup> + 2 * a * ${x}`;
+                    solvingFor1 = "a";
+                    ans1 = (vf**2 - vi**2) / (2 * x);
+                    unit1 = "m/s<sup>2</sup>";
+
+                    formula2 = "v<sub>f</sub> = v<sub>i</sub> + a * t";
+                    sub2 = `${vf} = ${vi} + ${formatAnswer(ans1)} * t`;
+                    solvingFor2 = "t";
+                    ans2 = (vf - vi) / ans1;
+                    unit2 = "s";
+                }
+                return {
+                    first: {
+                        formula: formula1,
+                        sub: sub1,
+                        solvingFor: solvingFor1,
+                        ans: formatAnswer(ans1),
+                        unit: unit1
+                    },
+                    second: {
+                        formula: formula2,
+                        sub: sub2,
+                        solvingFor: solvingFor2,
+                        ans: formatAnswer(ans2),
+                        unit: unit2
+                    }
+                };
+            };
+        };
+
+        button.addEventListener("click", function(e) {
+            e.preventDefault();
+
+            nanWarning.style.display = "none";
+            resultsRow.style.display = "none";
+            left.style.display = "none";
+            right.style.display = "none";
+            divider.style.display = "none";
+
+            const vi = getVal("vi");
+            const vf = getVal("vf");
+            const a = getVal("a");
+            const t = getVal("t");
+            const x = getVal("x");
+    
+            const inputsArray = [vi, vf, a, t, x];
+            const numGiven = inputsArray.filter(val => val !== null).length;
+            const result = solver(numGiven, x, vi, vf, a, t);
+    
+            if (numGiven === 4) {
+                if (isNaN(result.ans)) {
+                    nanWarning.style.display = "block";
+                    return;
+                }
+                
+                resultsRow.style.display = "flex";
+                left.style.display = "block";
+                
+                document.getElementById("formula-used-left").innerHTML = result.formula;
+                document.getElementById("substitution-left").innerHTML = result.sub;
+                document.getElementById("answer-left").innerHTML = `${result.solvingFor} = ${result.ans} ${result.unit}`;
+
+            } else {
+                if (isNaN(result.first.ans) || isNaN(result.second.ans)) {
+                    nanWarning.style.display = "block";
+                    return;
+                }
+                resultsRow.style.display = "flex";
+                left.style.display = "block";
+                right.style.display = "block";
+                divider.style.display = "block";
+
+                document.getElementById("formula-used-left").innerHTML = result.first.formula;
+                document.getElementById("substitution-left").innerHTML = result.first.sub;
+                document.getElementById("answer-left").innerHTML = `${result.first.solvingFor} = ${result.first.ans} ${result.first.unit}`;
+
+                document.getElementById("formula-used-right").innerHTML = result.second.formula;
+                document.getElementById("substitution-right").innerHTML = result.second.sub;
+                document.getElementById("answer-right").innerHTML = `${result.second.solvingFor} = ${result.second.ans} ${result.second.unit}`;
+            }
+        });
+    
+        inputs.forEach(input => input.addEventListener('input', checkInputs));
+        checkInputs();
+
+        inputs.forEach(input => {
+            input.addEventListener('focus', function () {
+                this.select();
+            });
+
+            input.addEventListener('mouseup', function (e) {
+                e.preventDefault(); 
+            });
+        });
+
+    </script>
+    
+</body>
+</html>
+
+<!-- 
+// HTML SYNTAX
+// vf     v<sub>f</sub>
+// vi     v<sub>i</sub>
+// 1/2    <sup>1</sup>&frasl;<sub>2</sub>
+// ^2     <sup>2</sup>
+// FORMULAS | HTML SYNTAX FOR FORMULAS: 
+// vf = vi + at
+    // "v<sub>f</sub> = v<sub>i</sub> + a * t"
+// x = vi * t + 1/2 * a * t^2
+    // "Δx = v<sub>i</sub> * t + <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>"
+// x = vf * t - 1/2 * a * t^2
+    // "Δx = v<sub>f</sub> * t - <sup>1</sup>&frasl;<sub>2</sub> * a * t<sup>2</sup>"
+// x = ((vi + vf) / 2) * t
+    // "Δx = (<sup>v<sub>i</sub> + v<sub>f</sub></sup>&frasl;<sub>2</sub>) * t"
+// vf^2 = vi^2 + 2 * a * x
+    // "v<sub>f</sub><sup>2</sup> = v<sub>i</sub><sup>2</sup> + 2 * a * Δx" 
+-->
