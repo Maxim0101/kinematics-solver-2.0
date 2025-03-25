@@ -5,7 +5,7 @@ In high school, when I was in physics class, I designed a physics calculator usi
 This project recreates my old program but better because it also uses html and css to create a friendly user interface. 
 
 In this project, you will find... 
-- an html file, which contains html code and a JavaScript (the presentation and functionality of the website)
+- an html file, which contains html code and JavaScript code (the presentation and functionality of the website)
 - a css file, which contains the styling for the html code
 - a png image, which is placed on the tab
 
